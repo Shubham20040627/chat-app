@@ -35,13 +35,32 @@ You can deploy the **Server** only. It is configured to serve the frontend files
 1. Running `npm run build` in the root folder builds the client.
 2. The server serves the build files from `client/dist`.
 
-### Option B: Split Deployment (Frontend & Backend separate)
-If you want to host the Client on **Vercel/Netlify** and Server on **Render**:
+### Option B: Split Deployment (Best for Performance)
 
-1. **Backend**: Deploy the `server` folder normally. Note down the provided URL (e.g., `https://my-chat-api.onrender.com`).
-2. **Frontend**: Deploy the `client` folder.
-3. **Important**: In your Frontend hosting settings (Environment Variables), add:
-   - `VITE_SERVER_URL`: `https://my-chat-api.onrender.com`
+**Step 1: Deploy Backend (Render)**
+1.  Create an account on [Render.com](https://render.com).
+2.  Click **New +** -> **Web Service**.
+3.  Connect your GitHub repository.
+4.  Scroll down to configure:
+    *   **Root Directory**: `server`
+    *   **Build Command**: `npm install`
+    *   **Start Command**: `npm start`
+5.  Click **Deploy**.
+6.  Once live, copy the URL (e.g., `https://chat-api.onrender.com`).
+
+**Step 2: Deploy Frontend (Vercel)**
+1.  Create an account on [Vercel.com](https://vercel.com).
+2.  Click **Add New...** -> **Project**.
+3.  Import your GitHub repository.
+4.  Configure the project:
+    *   **Root Directory**: Click "Edit" and select `client`.
+    *   **Framework**: It should auto-detect "Vite".
+5.  **Important**: Open the **Environment Variables** section.
+    *   Key: `VITE_SERVER_URL`
+    *   Value: Paste your Render Backend URL (from Step 1).
+6.  Click **Deploy**.
+
+**Result**: You now have a Frontend URL (Vercel) and a Backend URL (Render). Share the Vercel link with friends!
 
 ## Features
 - **Create Unique Rooms**: Share code to invite friends.
