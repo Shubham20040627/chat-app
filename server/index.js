@@ -104,7 +104,12 @@ io.on("connection", (socket) => {
             socket.join(room);
             socketRoomMap.set(socket.id, room);
 
-            // atomic add user
+            // atomic add user (Deduplicate by username first)
+            await Room.updateOne(
+                { roomCode: room },
+                { $pull: { users: { username: username } } }
+            );
+
             await Room.updateOne(
                 { roomCode: room },
                 { $addToSet: { users: { id: socket.id, username } } }
