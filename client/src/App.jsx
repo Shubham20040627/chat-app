@@ -191,6 +191,12 @@ function App() {
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Limit file size to 1MB to prevent socket disconnection/crash
+      if (file.size > 1024 * 1024) {
+        alert("File too large! Please upload a file smaller than 1MB.");
+        return;
+      }
+
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = () => {
