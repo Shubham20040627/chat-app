@@ -54,10 +54,21 @@ function App() {
       setStep('chat');
     }
 
+    socket.on("connect", () => {
+      // If we have a session, re-join the room immediately upon connection/reconnection
+      if (username && room) {
+        console.log("Reconnecting to room:", room);
+        socket.emit("join_room", { room, username });
+      }
+    });
+
     // Listen for errors and info
     socket.on("error_message", (msg) => {
       alert(msg);
-      leaveRoom();
+      // Only leave if it's a critical room error, not transient
+      if (msg.includes("expired")) {
+        leaveRoom();
+      }
     });
 
     socket.on("room_info", (data) => {
@@ -77,12 +88,13 @@ function App() {
     });
 
     return () => {
+      socket.off("connect");
       socket.off("error_message");
       socket.off("room_info");
       socket.off("load_messages");
       socket.off("room_users");
     };
-  }, []);
+  }, [username, room]); // Add dependencies so updated username/room are used
 
   // Timer logic
   useEffect(() => {
