@@ -104,15 +104,29 @@ io.on("connection", (socket) => {
             socket.join(room);
             socketRoomMap.set(socket.id, room);
 
-            // atomic add user (Deduplicate by username first)
+            // Atomic Deduplication & Add (Aggregation Pipeline)
+            // 1. Filter out any user with the same username
+            // 2. Append the new user
             await Room.updateOne(
                 { roomCode: room },
-                { $pull: { users: { username: username } } }
-            );
-
-            await Room.updateOne(
-                { roomCode: room },
-                { $addToSet: { users: { id: socket.id, username } } }
+                [
+                    {
+                        $set: {
+                            users: {
+                                $concatArrays: [
+                                    {
+                                        $filter: {
+                                            input: { $ifNull: ["$users", []] },
+                                            as: "u",
+                                            cond: { $ne: ["$$u.username", username] }
+                                        }
+                                    },
+                                    [{ id: socket.id, username: username }]
+                                ]
+                            }
+                        }
+                    }
+                ]
             );
 
             // Get updated list to show everyone
