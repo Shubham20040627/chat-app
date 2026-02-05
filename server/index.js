@@ -104,19 +104,23 @@ io.on("connection", (socket) => {
             socket.join(room);
             socketRoomMap.set(socket.id, room);
 
-            // Add user if not exists
-            const existingUser = roomData.users.find(u => u.id === socket.id);
-            if (!existingUser) {
-                roomData.users.push({ id: socket.id, username });
-                await roomData.save();
-            }
+            // atomic add user
+            await Room.updateOne(
+                { roomCode: room },
+                { $addToSet: { users: { id: socket.id, username } } }
+            );
+
+            // Get updated list to show everyone
+            const updatedRoom = await Room.findOne({ roomCode: room });
 
             console.log(`User ${socket.id} (${username}) joined room: ${room}`);
 
             // Send room info
             socket.emit("room_info", { expiryTime: roomData.expiry.getTime() });
             socket.emit("load_messages", roomData.messages);
-            io.to(room).emit("room_users", roomData.users);
+            if (updatedRoom) {
+                io.to(room).emit("room_users", updatedRoom.users);
+            }
 
         } catch (error) {
             console.error(error);
@@ -127,19 +131,26 @@ io.on("connection", (socket) => {
     socket.on("send_message", async (data) => {
         // data: room, author, message, time, type...
         try {
-            const roomData = await Room.findOne({ roomCode: data.room });
+            // Verify room exists
+            const exists = await Room.exists({ roomCode: data.room });
 
-            if (!roomData) {
+            if (!exists) {
                 socket.emit("error_message", "Room expired.");
                 return;
             }
 
-            roomData.messages.push(data);
-            await roomData.save();
+            // Atomic update using $push (Concurrency Safe)
+            await Room.updateOne(
+                { roomCode: data.room },
+                { $push: { messages: data } }
+            );
 
+            // Broadcast to others
             socket.to(data.room).emit("receive_message", data);
+
+            console.log(`Msg saved to ${data.room}`);
         } catch (error) {
-            console.error(error);
+            console.error("Msg save error:", error);
         }
     });
 
